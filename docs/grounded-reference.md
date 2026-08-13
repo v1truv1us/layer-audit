@@ -1,0 +1,80 @@
+# Prompt / Loop / Graph Engineering — Grounded Reference
+
+Everything below is sourced. Confidence labels: [docs] = official documentation, [primary] = author/team's own writing, [secondary] = practitioner write-up.
+
+## The five layers (Moka's taxonomy)
+
+An agent is a while loop with layers of engineering wrapped around it [1]:
+
+1. **Prompt engineering** — get one call right. One job per call, an example of expected quality, a schema that locks the output shape. Ceiling: if the agent fails the same way no matter how you reword, the bottleneck is outside the call [1].
+2. **Context engineering** — get one window right. Curate what enters the finite window; summarize old turns, compress tool outputs, park big blobs in files [1].
+3. **Harness engineering** — get one run right. Tools, permissions, verification, routing/recovery around the model. On Terminal Bench, a better harness moved the same model from top 30 to top 5 [1].
+4. **Loop engineering** — get one goal right. The agent runs unattended until a goal-check passes. The hard part is the stop: run caps, token budgets, no-progress detection, a completion check the model can't fake [1, 2].
+5. **Graph engineering** — get the whole workflow right. Transitions defined in code: if tests fail go back to fix, if they pass go to review, independent tasks in parallel, pause for human approval. "The graph is the rails, the loop is the motor" [1].
+
+Anthropic's framing predates and complements this: **workflows** = LLMs orchestrated through predefined code paths; **agents** = LLMs dynamically directing their own process [3]. Moka's "graph" ≈ Anthropic's "workflow"; Moka's "loop" ≈ Anthropic's "agent" with engineered stop conditions. Anthropic's five workflow patterns — prompt chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer — are all *workflows* (code owns control flow), not agents [3]. The convergent rule across Anthropic, OpenAI, and LangChain: find the simplest solution; add complexity only when it demonstrably improves outcomes [3, 4, 15].
+
+## Loop engineering in Claude Code
+
+Mechanism: the **Stop hook**. When the agent tries to end its turn, a registered script runs; exit code 2 blocks the stop and continues the conversation [5, docs].
+
+The three rules practitioners keep rediscovering [7, 8, 9]:
+
+1. **Exit 2 blocks; exit 1 does not.** Exit 1 is a non-blocking error — Claude Code waves the turn through. A gate ending in `exit 1` on its failure path is a placebo: it fails quietly, in the wrong direction, on the day tests are actually red [7].
+2. **Check `stop_hook_active`.** The stdin payload includes this flag; it's true when the current stop exists because a previous block fired. If you block again on every stop, the session wedges shut. Standard guard: if the flag is set, exit 0 [7, 9]. (Belt-and-suspenders: Claude Code overrides a Stop hook after 8 consecutive blocks, tunable via `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` [8].)
+3. **The check must be external and falsifiable.** Run the test suite, check the file, query `gh pr checks` — never ask the model if it's done. Canonical minimal gate: run `npm test`; green → exit 0; red → `{"decision":"block","reason":"..."}` [7, 9].
+
+Practical notes: set an explicit short `timeout` on the hook (a slow check taxes every turn); scope conditions tightly or the gate becomes noise you learn to ignore [7]; hooks run synchronously, so put heavy checks on Stop, light ones on PostToolUse [9].
+
+Headless alternative: `claude -p` in a bash until-loop with an external check — same pattern, no hook registration. The Agent SDK formalizes this: `query()` with `maxTurns`, resumable `session_id`, and `ResultMessage` subtypes (`success`, `error_max_turns`, `error_max_budget_usd`) your code branches on [6, docs]. That's a loop with a coded exit condition and resume.
+
+## Loop engineering in OpenCode
+
+No Stop-hook equivalent is documented; the idiomatic loop is a **shell wrapper around `opencode run`** (headless) with an external check, or a **plugin** reacting to `session.idle` events [10, 11]. Caution: subagent idle events are structurally identical to main-session idle events — filter by `parentID` or you'll treat a finished subagent as a finished run [14, primary issue].
+
+## Graph engineering in OpenCode
+
+The substrate is genuinely good — the SDK/server exposes everything a graph runtime needs [10, 11, docs]:
+
+- `session.create({ parentID })` / `session.children()` — parent-child session trees (the nodes).
+- `session.promptAsync()` — fire-and-forget, returns 204 (parallel branches).
+- `GET /event` (SSE) — real-time completion subscription (the edge-trigger).
+- `session.prompt` with `outputFormat` — structured output your router branches on (the transition conditions).
+- Per-session `agent` routing and permissions — specialized nodes.
+
+Working examples: the **opencode-agent-teams** npm plugin implements `team_create` (a DAG of tasks with `depends_on`), `team_run` (topological sort, parallel execution per dependency level via `Promise.all`), and `background` (fire-and-forget with result injection into the parent) in ~200 LOC on exactly those primitives [12, primary]. The plugin-based orchestration proposal in issue #20849 lays out the same architecture and explicitly recommends ~5 concurrent sessions [13]. Gap to know: `opencode run --format json` drops child-session events — headless multi-agent runs are fire-and-forget unless you use `opencode serve` + SSE (issue #33397, with a proposed patch) [14].
+
+Your `dynamic-workflow.ts` is this pattern: planner builds a spec, router maps steps to model tiers, executor runs sequence/parallel/pipeline phases over child sessions.
+
+## Graph engineering in Claude Code
+
+Two levels:
+
+1. **Task-tool fan-out**: an orchestrator agent spawns subagents; `SubagentStop` hooks and the 8-block cap apply per subagent [5, 8].
+2. **Agent SDK orchestration**: your code drives `query()` calls, branches on `ResultMessage`, resumes sessions by ID across restarts, and uses hooks (`PostToolBatch` can halt the loop before the next model call) as in-band circuit breakers [5, 6]. This is the rails-and-motor split in its cleanest form: the model is the motor inside each node; your code is the rails between them.
+
+## The decision rubric (what to tell readers)
+
+- **Stay prompt** when one call does the job and a human reads the output. Anthropic: maybe don't build agentic systems at all [3].
+- **Loop** when: repeated trigger + a done-condition a script can check + the path varies per run. The engineering is the exit condition, not the retry.
+- **Graph** only when at least one is true: **parallel branches, human approval mid-run, resume-after-crash** [1]. Otherwise the loop is enough.
+- **Neither — fix the harness** when the same error signature repeats: a tool/permission/verification fix, not a layer jump [1].
+
+## References
+
+1. Moka, *Agentic Engineering 101* — https://craftbettersoftware.com/p/agentic-engineering-101 [primary]
+2. Moka, *Loop Engineering 101* — https://craftbettersoftware.com/p/loop-engineering-101 [primary]
+3. Anthropic, *Building Effective Agents* — https://www.anthropic.com/engineering/building-effective-agents [primary]
+4. Claude, *Common workflow patterns for AI agents* — https://claude.com/blog/common-workflow-patterns-for-ai-agents-and-when-to-use-them [primary]
+5. Claude Code docs, *Hooks reference* — https://code.claude.com/docs/en/hooks [docs]
+6. Claude Code docs, *How the agent loop works (Agent SDK)* — https://code.claude.com/docs/en/agent-sdk/agent-loop [docs]
+7. Kothari, *How Claude Code stop hooks work* — https://amitkoth.com/claude-code-stop-hooks/ [secondary]
+8. backgrind, *Claude Code Hooks Explained: Events, Payloads, Exit Codes* — https://backgrind.com/blog/claude-code-hooks-explained/ [secondary]
+9. Claude Lab, *Running Claude Code Hooks as a Quality Gate* — https://claudelab.net/en/articles/claude-code/claude-code-hooks-quality-gate-reliability [secondary]
+10. OpenCode docs, *SDK* — https://opencode.ai/docs/sdk/ [docs]
+11. OpenCode docs, *Server* — https://opencode.ai/docs/server/ [docs]
+12. *opencode-agent-teams* — https://www.npmjs.com/package/opencode-agent-teams [primary]
+13. opencode issue #20849, *Plugin-based agent orchestration layer* — https://github.com/anomalyco/opencode/issues/20849 [primary]
+14. opencode issue #33397, *Expose child session events in NDJSON stream* — https://github.com/anomalyco/opencode/issues/33397 [primary]; related: #30043, *session.status should include parentID* — https://github.com/anomalyco/opencode/issues/30043
+15. LangChain, *How to think about agent frameworks* — https://www.langchain.com/blog/how-to-think-about-agent-frameworks [primary]
+16. Zhang (Anthropic), *How We Build Effective Agents* talk summary — https://shellypalmer.com/2026/04/how-anthropic-thinks-about-agents-workflows-and-tasks/ [secondary]
