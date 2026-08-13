@@ -77,3 +77,16 @@ Average developers engineer the prompt. The rest of the job is the environment a
 2. **The 5-day hang claim**: verify your own log line before publishing (`grep "457438" ~/.pi/agent/logs/runtimes.log`) — it's your best anecdote, make sure you can defend it.
 3. **How much of your setup to reveal**: the morning-brief/second-brain/trading examples are specific and credible; the trading one especially. Keep or genericize to taste.
 4. **Moka attribution**: the piece leans on his taxonomy heavily — consider a one-line heads-up to him on Substack after publishing; good first-post etiquette and distribution.
+
+## New material to consider weaving in (added 2026-08-13, from second research pass)
+
+Strongest additions, in order of value to the article:
+
+1. **"A loop is a single node in a graph"** (AI Builder Club [17]) — the sentence that ends the loops-vs-graphs flame war. You don't graduate from loops; you wrap them. Pairs perfectly with Moka's "rails and motor" line.
+2. **The reviewer-node insight** [17]: the first edge to draw when promoting a loop to a graph is pulling *review* into a fresh context — a loop that reviews its own draft rubber-stamps it. This is a concrete, non-obvious claim your readers can act on, and it applies directly to your morning-brief example (it "verifies" its own output today, in the same context that wrote it).
+3. **The 4-question gut check** [17]: split contexts? real fan-out/fan-in? control flow readable as a diagram? did the success bar change? Zero-to-one yes = a loop wearing a flowchart. Good as a sidebar box.
+4. **The skeptic beat** [17]: the term is new, the practice isn't — LangGraph, AutoGen GraphFlow, Google ADK all shipped graph orchestration before July 2026. Paweł Huryn's "I call BS on graph engineering" + his deeper point (the discipline is naming the objective and the bar, whatever you draw). One paragraph of this makes the article honest instead of hypey, and it's a good look for a first post.
+5. **Augment's team-level frame** [18]: trigger → execute → verify (human checkpoint placed by risk) → outcome → improve. Two quotable lines: "a loop that generates output nobody ships is not a successful loop" and "measure loops in outcomes per dollar, not output per dollar." Also Boris Cherny's "I don't prompt Claude anymore, I write loops."
+6. **Context rot** as the motivation for graphs: a single loop carrying research + drafting + review in one context degrades as the window fills — the researcher's raw search dumps contaminate the reviewer. This is *why* graph nodes get fresh windows (and it's literally what OpenCode's Task tool does — new session per subagent [19]).
+
+Suggested insertion points: 1+2 into the graph section; 3 as a boxed sidebar after the decision rule; 4 as a short "is this just a rebrand?" section before the conclusion; 5 into the conclusion; 6 into the intro/problem framing.

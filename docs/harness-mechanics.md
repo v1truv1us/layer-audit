@@ -31,3 +31,60 @@ If the done-condition can't be written as a shell test, there is no loop yet.
 - Stop hook + exit check covers ~80% of "should this be a loop?" cases.
 - Reach for a graph only when at least one holds: **parallel branches, human approval mid-run, resume-after-crash**. Otherwise a loop is enough — "the graph is the rails, the loop is the motor."
 - A skill invoked by hand once in a while stays a prompt. Layer upgrades pay off only on repeated, triggered work.
+
+## The decision flowchart
+
+```
+              ┌──────────────────────────────┐
+              │   Incoming issue / workflow │
+              └──────────────┬───────────────┘
+               Single-turn transformation,
+               no verification needed?
+                  ┌──────────┴──────────┐
+                YES                    NO
+                  │   Needs iterative trial/error
+                  │   against a scriptable verifier?
+                  │        ┌──────────┴──────────┐
+                  │      YES                    NO
+                  │        │   Multiple specialized roles or
+                  │        │   parallel branches to stop
+                  │        │   context rot / self-review?
+                  │        │        ┌──────────┴──────────┐
+                  │        │      YES                   NO → harness fix
+        ┌─────────▼───────┐┌───────▼────────┐  ┌─────────▼─────────┐
+        │ PROMPT          ││ LOOP           │  │ GRAPH             │
+        └─────────────────┘└────────────────┘  └───────────────────┘
+```
+
+## Criteria comparison
+
+| Dimension | Prompt | Loop | Graph |
+|-----------|--------|------|-------|
+| Topology | 1 → 1 | one node, edge to itself | N nodes, explicit edges |
+| Verification gate | human eyeball | machine exit code (tests, lint, file check) | multi-stage gates, specialist verifier nodes |
+| Context | single turn, ephemeral | one session (context saturates over long runs) | isolated clean window per node |
+| Primary failure mode | hallucination | infinite loop / fix-regression thrash | state leaks between nodes, merge drops data, routing bugs |
+| Best for | formatting, commit messages, one-off refactors | bug fixes, failing tests, dep updates, scheduled briefs | multi-file features, cross-repo work, research→write→review pipelines |
+
+## Canonical verifier loop (corrected)
+
+The loop example circulating in research digests has a shell bug (`-lt$MAX_RETRIES` — missing space, never runs). Working version:
+
+```bash
+#!/usr/bin/env bash
+MAX_RETRIES=5
+COUNT=0
+VERIFY="npm test"
+
+while [ "$COUNT" -lt "$MAX_RETRIES" ]; do
+  if $VERIFY; then
+    echo "Verifier passed."; exit 0
+  fi
+  COUNT=$((COUNT + 1))
+  claude -p "The command '$VERIFY' failed (attempt $COUNT/$MAX_RETRIES). Read the error output, inspect the relevant files, and fix it." --dangerously-skip-permissions
+done
+
+echo "Exceeded $MAX_RETRIES attempts."; exit 1
+```
+
+Notes: run the verifier *before* invoking the agent (don't burn a call when already green); pass the attempt count so the agent knows the loop is watching; exit non-zero on exhaustion so a wrapper (launchd, run-locked) records the failure.

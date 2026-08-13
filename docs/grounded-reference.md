@@ -60,6 +60,37 @@ Two levels:
 - **Graph** only when at least one is true: **parallel branches, human approval mid-run, resume-after-crash** [1]. Otherwise the loop is enough.
 - **Neither — fix the harness** when the same error signature repeats: a tool/permission/verification fix, not a layer jump [1].
 
+### The 4-question gut check (AI Builder Club) [17]
+
+Before claiming a loop became a graph, count the yeses:
+1. Did you split one context into separate, specialized ones (not one agent switching hats)?
+2. Is there a real fan-out/fan-in (parallel + merge, not a sequence drawn as boxes)?
+3. Can you read the control flow as a diagram (routing defined up front, not emergent)?
+4. Did the objective and success bar change? (If "done and correct" is identical, only the drawing changed.)
+
+0–1 yes: a loop wearing a graph diagram. 2–3: genuinely composing. The one-line test: if you can name the specialized roles and draw an arrow between them, it's a graph; if one job needs to repeat until right, it's a loop.
+
+### The migration path that actually works [17]
+
+**A loop is a single node in a graph** — you don't graduate from loops, you wrap them:
+1. Keep the loop; it becomes node one.
+2. Split off the step failing inside it — almost always the *reviewer*, because a loop reviewing its own draft in the same context rubber-stamps it. Pulling review into a fresh-context node is the highest-value first edge.
+3. Write down what node one hands node two (the state schema) — this is where graphs silently break.
+4. Add fan-out only where you already iterate over N things one at a time.
+5. Stop when the next node stops paying. Two or three well-separated nodes cover most real uses.
+
+### Team-level loops (Augment Code) [18]
+
+The outer shape of an agentic SDLC loop: **trigger → execution → verification (with human checkpoints placed by risk) → outcome → improve** (each run's trace feeds back into prompts/tests/criteria). Two rules worth stealing: "a loop that generates output nobody ships is not a successful loop" — loops must be accountable for finishing something — and measure loops on **outcomes per dollar, not output per dollar**. Boris Cherny (Claude Code creator): "I don't prompt Claude anymore, I write loops" [18].
+
+### Prior art note (for the skeptics section)
+
+Graph orchestration predates the July 2026 term: LangGraph `StateGraph` (add_node/add_edge), Microsoft AutoGen GraphFlow, Google ADK graph workflows + A2A delegation all shipped before "graph engineering" trended [17]. David K. Piano (XState creator) and Paweł Huryn are the named skeptics — Huryn's point: whether drawn as loop or graph, the discipline underneath (name the objective and the bar) doesn't change [17].
+
+### Harness internals worth knowing (Cefboud deep dive) [19]
+
+How OpenCode actually works under the hood: Bun/Hono HTTP server + Go TUI; the agent loop is AI SDK `streamText` with `stopWhen` controlling iterations; tools are description+schema+execute, and the *description is prompt engineering for the tool*; LSP diagnostics feed back into context after every edit (an in-harness verifier loop); the Task tool spawns a subagent as a **new session with its own context window, tools, and model**; git-write-tree snapshots before each step enable revert. Context compaction auto-summarizes at ~90% of the window.
+
 ## References
 
 1. Moka, *Agentic Engineering 101* — https://craftbettersoftware.com/p/agentic-engineering-101 [primary]
@@ -78,3 +109,12 @@ Two levels:
 14. opencode issue #33397, *Expose child session events in NDJSON stream* — https://github.com/anomalyco/opencode/issues/33397 [primary]; related: #30043, *session.status should include parentID* — https://github.com/anomalyco/opencode/issues/30043
 15. LangChain, *How to think about agent frameworks* — https://www.langchain.com/blog/how-to-think-about-agent-frameworks [primary]
 16. Zhang (Anthropic), *How We Build Effective Agents* talk summary — https://shellypalmer.com/2026/04/how-anthropic-thinks-about-agents-workflows-and-tasks/ [secondary]
+17. AI Builder Club, *Graph Engineering vs Loop Engineering* — https://www.aibuilderclub.com/blog/graph-engineering-vs-loop-engineering [secondary, verified 2026-08-13]. Sibling decision guide: https://www.aibuilderclub.com/blog/agent-graph-vs-loop-when-to-use
+18. Perneti (Augment Code), *What is loop engineering?* — https://www.augmentcode.com/guides/what-is-loop-engineering [primary/vendor, verified 2026-08-13]
+19. Abboud, *How Coding Agents Actually Work: Inside OpenCode* — https://cefboud.com/posts/coding-agents-internals-opencode-deepdive/ [secondary, source-code read, verified 2026-08-13]
+
+Unverified (surfaced in third-party research digests, not yet checked — treat as leads, not citations):
+- Raj, *Prompt vs Loop vs Graph Engineering* (Medium/The Gravity)
+- *AFlow: Automating Agentic Workflow Generation* (arXiv 2410.10762)
+- Greyling, *Agent Teams & Subagents in Claude Code* (Medium)
+- *Prompts vs Skills vs Loops* (YouTube, https://www.youtube.com/watch?v=32jdWMbvgbw)
