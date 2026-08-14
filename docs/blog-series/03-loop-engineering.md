@@ -34,7 +34,8 @@
 
 ## Pre-writing checklist
 
-- [ ] Confirm `/goal`, `/loop`, `/schedule` exist (type `/` in a Claude Code session; check docs) — correct or kill that section
+- [x] Confirm `/goal`, `/loop`, `/schedule` exist — **confirmed 2026-08-13**
+- [ ] Watch one `/goal` run and confirm the evaluator call is a separate model invocation (transcript or debug log)
 - [ ] Actually convert morning-brief to a verify-retry loop (the upgrade-workflow skill's first real job)
 - [ ] Deliberately break a Stop hook with `exit 1` and watch it wave the turn through — the placebo is the post's best demo
 - [ ] Test a deliberately-wedged loop against `stop_hook_active` and the 8-block cap

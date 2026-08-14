@@ -7,7 +7,7 @@
 ## What you get out of the box
 
 - **Hooks** (30 events): `Stop`, `SubagentStop`, `PreToolUse`, `PostToolBatch` — interception points on every phase of the agent loop [5, 8].
-- **`/goal`, `/loop`, `/schedule`** — native loop commands (verify before publishing — checklist) [20].
+- **`/goal`, `/loop`, `/schedule`** — native loop commands (confirmed present 2026-08-13) [20].
 - **Agent SDK** — `query()` with `maxTurns`, budget caps, resumable `session_id`, typed result messages [6].
 - **Subagents + Task tool** — fresh-context delegation [19 describes the OpenCode equivalent; Claude Code's is analogous].
 
@@ -42,6 +42,6 @@
 
 ## Pre-writing checklist
 
-- [ ] Confirm `/goal` `/loop` `/schedule` against official docs or a live session
+- [x] Confirm `/goal` `/loop` `/schedule` exist — **confirmed 2026-08-13**
 - [ ] Build both reference implementations and time them
 - [ ] Deliberately trigger the exit-1 placebo and the 8-block override; screenshot both

@@ -93,7 +93,7 @@ How OpenCode actually works under the hood: Bun/Hono HTTP server + Go TUI; the a
 
 ### Claude Code native loop commands (Claude Code Masterclass) [20]
 
-⚠️ Source is a practitioner newsletter, not Anthropic docs — the `/goal`, `/loop`, `/schedule` commands are described as native but I have not confirmed them against official documentation. Verify before relying on syntax.
+`/goal`, `/loop`, `/schedule` confirmed present in Claude Code (verified in a live session, 2026-08-13). The evaluator-model detail below is as-described by [20]; behavior-level details (separate evaluator call) not independently confirmed against official docs.
 
 - `/goal <binary condition>, stop after N tries` — outcome-based loop. Key detail: **a separate evaluator model call checks the goal condition after each iteration** — verification is architecturally outside the working context, which is exactly the fresh-reviewer principle from [17]. Good conditions are measurable and binary ("all 47 tests passing"); weak ones ("make the code better") never exit.
 - `/loop <interval> <task>` — time-based loop, no stop condition, dies when the terminal closes. For ongoing event-reactive work (poll PR comments, watch CI).
