@@ -91,6 +91,24 @@ Graph orchestration predates the July 2026 term: LangGraph `StateGraph` (add_nod
 
 How OpenCode actually works under the hood: Bun/Hono HTTP server + Go TUI; the agent loop is AI SDK `streamText` with `stopWhen` controlling iterations; tools are description+schema+execute, and the *description is prompt engineering for the tool*; LSP diagnostics feed back into context after every edit (an in-harness verifier loop); the Task tool spawns a subagent as a **new session with its own context window, tools, and model**; git-write-tree snapshots before each step enable revert. Context compaction auto-summarizes at ~90% of the window.
 
+### Claude Code native loop commands (Claude Code Masterclass) [20]
+
+⚠️ Source is a practitioner newsletter, not Anthropic docs — the `/goal`, `/loop`, `/schedule` commands are described as native but I have not confirmed them against official documentation. Verify before relying on syntax.
+
+- `/goal <binary condition>, stop after N tries` — outcome-based loop. Key detail: **a separate evaluator model call checks the goal condition after each iteration** — verification is architecturally outside the working context, which is exactly the fresh-reviewer principle from [17]. Good conditions are measurable and binary ("all 47 tests passing"); weak ones ("make the code better") never exit.
+- `/loop <interval> <task>` — time-based loop, no stop condition, dies when the terminal closes. For ongoing event-reactive work (poll PR comments, watch CI).
+- `/schedule <cron-ish> <task>` — `/loop` moved to Anthropic's cloud; survives laptop close. For digests and fixed-schedule work.
+- The combined **proactive pattern**: `/schedule` as the trigger + `/goal` as the batch completer ("every hour: check for bug reports" + "don't stop until every report found this run is triaged").
+
+The article's three qualities of a good loop, which map cleanly onto the cooking-hook machinery:
+1. **Clear stop condition** = success condition (binary, measurable) + safety cap (max iterations). The cap protects the budget from a stuck agent.
+2. **Context management** — after ~a dozen iterations the window is polluted with old test logs and file states. Fixes: keep only latest error + file in question, `/compact` old steps, restate the goal every cycle (CLAUDE.md is reloaded each iteration).
+3. **Error recovery** — design the loop assuming commands will fail; the stop condition keys on the *goal being met*, not on commands running clean.
+
+Four phases every loop runs: **discover → plan → execute → verify**. And the three limitations that push a loop toward a graph (same conclusion as [17], independently): it can't credibly review its own fixes, it can't parallelize, and you can't read the flow as a diagram from a 47-tool-call transcript.
+
+Origin detail: Boris Cherny's quote is dated June 30, 2026 here — "I no longer prompt Claude anymore. I have loops running that prompt Claude and figure out what to do next. My job is to write loops." [20]
+
 ## References
 
 1. Moka, *Agentic Engineering 101* — https://craftbettersoftware.com/p/agentic-engineering-101 [primary]
@@ -112,6 +130,7 @@ How OpenCode actually works under the hood: Bun/Hono HTTP server + Go TUI; the a
 17. AI Builder Club, *Graph Engineering vs Loop Engineering* — https://www.aibuilderclub.com/blog/graph-engineering-vs-loop-engineering [secondary, verified 2026-08-13]. Sibling decision guide: https://www.aibuilderclub.com/blog/agent-graph-vs-loop-when-to-use
 18. Perneti (Augment Code), *What is loop engineering?* — https://www.augmentcode.com/guides/what-is-loop-engineering [primary/vendor, verified 2026-08-13]
 19. Abboud, *How Coding Agents Actually Work: Inside OpenCode* — https://cefboud.com/posts/coding-agents-internals-opencode-deepdive/ [secondary, source-code read, verified 2026-08-13]
+20. Njenga, *Claude Code Loop & Graph Engineering Masterclass (Part 1)* — https://open.substack.com/pub/claudecodemasterclass/p/claude-code-loop-and-graph-engineering [secondary, verified 2026-08-13]. Part 2 (graph engineering with agent teams) announced for 2026-08-17, not yet published at time of writing.
 
 Unverified (surfaced in third-party research digests, not yet checked — treat as leads, not citations):
 - Raj, *Prompt vs Loop vs Graph Engineering* (Medium/The Gravity)
