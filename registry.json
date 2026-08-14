@@ -225,5 +225,21 @@
         "finance-pulse"
       ]
     }
+  },
+  "projects": {
+    "audit-loop-sdk": {
+      "path": "~/Github/ud/audit-loop-sdk",
+      "bench": "bun test",
+      "correctness": "bun test",
+      "metric": "duration_s",
+      "max_duration_s": 5
+    },
+    "rainfocus": {
+      "path": null,
+      "bench": null,
+      "correctness": null,
+      "metric": "duration_s",
+      "note": "fill in path + bench + correctness when the repo is on this machine"
+    }
   }
 }

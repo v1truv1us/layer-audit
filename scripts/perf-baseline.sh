@@ -8,7 +8,60 @@
 set -uo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 WF="${1:-}"
-[ -z "$WF" ] && { echo "usage: perf-baseline.sh <workflow> [--runs]"; exit 1; }
+[ -z "$WF" ] && { echo "usage: perf-baseline.sh <workflow|--project name> [--runs]"; exit 1; }
+
+# --- project mode: any repo with a bench command ---------------------------
+if [ "$WF" = "--project" ]; then
+  PROJ="${2:-}"
+  [ -z "$PROJ" ] && { echo "usage: perf-baseline.sh --project <name>"; exit 1; }
+  PROJ_LINE=$(python3 - "$REPO_DIR" "$PROJ" <<'EOF'
+import json, sys
+reg = json.load(open(f"{sys.argv[1]}/registry.json"))
+p = reg.get("projects", {}).get(sys.argv[2], {})
+print("|".join([p.get("path") or "-", p.get("bench") or "-", p.get("correctness") or "-", str(p.get("max_duration_s") or "-")]))
+EOF
+)
+  IFS='|' read -r PPATH PBENCH PCORRECT PMAX <<< "$PROJ_LINE"
+  if [ "$PPATH" = "-" ] || [ "$PBENCH" = "-" ]; then
+    echo "project '$PROJ' has no path/bench in registry.json — fill them in first"
+    exit 1
+  fi
+  PPATH="${PPATH/#\~/$HOME}"
+  [ ! -d "$PPATH" ] && { echo "path not found: $PPATH"; exit 1; }
+
+  echo "project:     $PROJ ($PPATH)"
+  echo "bench:       $PBENCH"
+  echo "correctness: $PCORRECT"
+
+  echo "correctness gate: $PCORRECT"
+  (cd "$PPATH" && eval "$PCORRECT" >/dev/null 2>&1) || { echo "GATE RED — fix correctness before perf work"; exit 1; }
+  echo "gate green. timing 3 bench runs..."
+  BEST_MED=""
+  TIMES=""
+  for i in 1 2 3; do
+    S=$(date +%s)
+    M0=$(python3 -c 'import time; print(time.monotonic())')
+    (cd "$PPATH" && eval "$PBENCH" >/dev/null 2>&1)
+    D=$(python3 -c "import time; print(round(time.monotonic() - $M0, 2))")
+    TIMES="$TIMES $D"
+    "$REPO_DIR/scripts/emit-telemetry.sh" --workflow "$PROJ" --harness bash --trigger manual --outcome success --stop-reason done --ts-start "$S" --duration "$D"
+    echo "  run $i: ${D}s"
+  done
+  MED=$(echo $TIMES | tr ' ' '\n' | sort -n | sed -n 2p)
+  TARGET=$(python3 -c "print(round($MED * 0.7, 2))")
+  cat <<EOF
+baseline:    median ${MED}s$([ "$PMAX" != "-" ] && echo " (registry target: ${PMAX}s)")
+
+--- performance-goal loop (paste into Claude Code / opencode run) ---
+/goal median of 3 runs of '$PBENCH' in $PPATH under ${TARGET}s (30% cut from ${MED}s baseline) AND '$PCORRECT' green, stop after 6 tries
+--- rules ---
+harness times, never the agent. one hypothesis per iteration. beat the median
+or git restore. correctness gate ($PCORRECT) must stay green every iteration.
+EOF
+  exit 0
+fi
+
+# --- workflow mode ----------------------------------------------------------
 
 read -r MEDIAN RUNS MAX_S OUTPUT_CHECK < <(python3 - "$REPO_DIR" "$WF" <<'EOF'
 import json, sys

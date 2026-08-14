@@ -273,6 +273,12 @@ def existing_proposal_ids():
 def main():
     reg = load_registry()
     workflows = reg["workflows"]
+    for name, p in reg.get("projects", {}).items():
+        if name not in workflows:
+            workflows[name] = {
+                "declared_layer": "harness", "trigger": "manual", "kind": "project",
+                "max_duration_s": p.get("max_duration_s"), "aliases": [],
+            }
     weights = reg["weights"]
     thresholds = reg["thresholds"]
 
