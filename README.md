@@ -31,6 +31,9 @@ scripts/run-layer-audit.sh (Mon 07:00, launchd)
 | prompt-layer + fail>15% or silent>10% | `stuck-at-prompt` | wrap in loop with verification |
 | same `error_sig` ≥30% of runs | `harness-gap` | fix tool/permission, not retries |
 | loop-layer + cap≥30% | `non-terminating-loop` | fix goal-check or promote to graph |
+| ≥10% of runs >1h | `hung-runs` | add hard timeout to the wrapper |
+| 7d median > `max_duration_s` | `performance-target-breach` | fix slowdown or set perf-goal loop |
+| 7d median >1.5× baseline | `performance-regression` | bisect: model route → context size → tool latency |
 | runs but not in registry | `unregistered-workflow` | classify + register |
 
 Hung runs (>1h duration) are reported informationally, not scored. `registry.json` holds per-workflow layer, trigger, output check (`output_glob`, `min_bytes`), and aliases (cross-harness names share one key).
@@ -40,7 +43,8 @@ Hung runs (>1h duration) are reported informationally, not scored. `registry.jso
 - `docs/grounded-reference.md` — the five layers, mechanics per harness, decision rubric, all web-sourced
 - `docs/classification-2026-08-12.md` — every workflow classified with rationale
 - `docs/blog-draft.md` — first-person article draft based on the above
-- `docs/blog-series/` — 5-post series plan with per-post outlines and pre-writing checklists
+- `docs/blog-series/` — 8-post series plan with per-post outlines and pre-writing checklists
+- `docs/performance-loops.md` — writing performance-goal verifiers (median-of-N, external measurement, anti-Goodhart pairing)
 
 ## External wiring (absolute paths — update if this repo moves)
 

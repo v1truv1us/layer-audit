@@ -153,6 +153,8 @@ def compute_signals(runs):
     sigs = Counter(r["error_sig"] for r in runs if r.get("error_sig"))
     verified = sum(1 for r in runs if r.get("verified"))
     hung = sum(1 for r in runs if r.get("duration_s") and r["duration_s"] > 3600)
+    durations = sorted(r["duration_s"] for r in runs if r.get("duration_s") is not None)
+    median_s = durations[len(durations) // 2] if durations else None
     return {
         "runs": total,
         "fail": outcomes["failure"] / total,
@@ -163,8 +165,24 @@ def compute_signals(runs):
         "repeat_error": (sigs.most_common(1)[0][1] / total) if sigs else 0.0,
         "unverified": 1 - (verified / total),
         "hung": hung,
+        "median_s": median_s,
         "top_errors": sigs.most_common(3),
     }
+
+
+def perf_window(runs, now):
+    """Split runs into recent (7d) and baseline (8-30d), compare median durations."""
+    recent_cut = now - 7 * 86400
+
+    def med(rs):
+        ds = sorted(r["duration_s"] for r in rs if r.get("duration_s") is not None)
+        return ds[len(ds) // 2] if ds else None
+
+    recent = [r for r in runs if r["ts_start"] >= recent_cut]
+    baseline = [r for r in runs if r["ts_start"] < recent_cut]
+    rm, bm = med(recent), med(baseline)
+    regressed = rm is not None and bm is not None and len(recent) >= 3 and rm > bm * 1.5
+    return {"recent_median_s": rm, "baseline_median_s": bm, "regressed": regressed}
 
 
 def classify(workflow, spec, sig, thresholds):
@@ -175,6 +193,14 @@ def classify(workflow, spec, sig, thresholds):
         return "harness-gap", layer
     if layer == "loop" and sig["cap"] >= thresholds["cap_rate"]:
         return "non-terminating-loop", "graph"
+    perf = sig.get("perf", {})
+    if sig["hung"] / sig["runs"] >= 0.10:
+        return "hung-runs", layer
+    max_s = spec.get("max_duration_s")
+    if max_s and perf.get("recent_median_s") and perf["recent_median_s"] > max_s:
+        return "performance-target-breach", layer
+    if perf.get("regressed"):
+        return "performance-regression", layer
     return None, None
 
 
@@ -182,14 +208,25 @@ ISSUE_COPY = {
     "stuck-at-prompt": "One-shot prompt that fails or silently produces no output too often. Rewording the prompt has hit its ceiling — wrap it in a loop with a verification step that checks the output actually landed.",
     "harness-gap": "The same error signature repeats across runs. Retrying won't help; a tool, permission, or environment fix is needed before more runs.",
     "non-terminating-loop": "The loop hits its iteration cap instead of converging. The goal-check is too strict or the path is underspecified — promote to explicit graph transitions or loosen the check.",
+    "performance-regression": "Median run duration grew >50% week-over-week. Something in the model route, prompt size, or environment got slower. Bisect: model choice first, then context size, then tool latency.",
+    "performance-target-breach": "Runs exceed the registry's max_duration_s target. Either the workflow got slower (see regression) or the target is wrong. Fix the slowdown or set a performance-goal loop to bring it back under target.",
+    "hung-runs": "≥10% of runs exceeded 1 hour — the trigger fired, the agent never came back, and the wrapper reported OK. Add a hard timeout to the run wrapper (e.g. `timeout` command or launchd `TimeOut`) so hangs fail loudly instead of pretending to succeed.",
 }
 
 
 def proposal_markdown(pid, workflow, spec, issue, target, score, sig):
+    current = spec.get("declared_layer", "unknown")
+    change_line = (
+        f"Keep `{workflow}` at **{current}** — fix the performance, don't change the architecture."
+        if target == current else
+        f"Move `{workflow}` from **{current}** to **{target}**."
+    )
     ev = {
         "runs_30d": sig["runs"], "fail_rate": round(sig["fail"], 3),
         "silent_rate": round(sig["silent"], 3), "cap_rate": round(sig["cap"], 3),
         "repeat_error": round(sig["repeat_error"], 3), "unverified": round(sig["unverified"], 3),
+        "median_duration_s": sig.get("median_s"),
+        "perf": sig.get("perf"),
         "top_errors": sig["top_errors"],
     }
     return f"""---
@@ -212,7 +249,7 @@ status: pending
 - Top error signatures: {', '.join(f'`{s}` x{c}' for s, c in sig['top_errors']) or 'none'}
 
 ## Proposed change
-Move `{workflow}` from **{spec.get("declared_layer", "unknown")}** to **{target}**.
+{change_line}
 
 ## Verification plan
 Run the upgraded workflow once manually and confirm the audit signal drops on the next weekly audit.
@@ -264,6 +301,7 @@ def main():
         if spec and spec.get("enabled") is False:
             continue
         sig = compute_signals(wfruns)
+        sig["perf"] = perf_window(wfruns, int(datetime.now().timestamp()))
         if sig["runs"] < thresholds["min_runs"]:
             rows.append((wf, spec, sig, 0.0, None, None, "insufficient-data"))
             continue
@@ -284,13 +322,14 @@ def main():
     insufficient = [r for r in rows if r[6] == "insufficient-data"]
 
     lines = [f"# Layer audit — {today}", "",
-             "| # | Workflow | Layer | Runs | Fail | Silent | Cap | RepeatErr | Unverified | Hung(>1h) | Score | Issue |",
-             "|---|----------|-------|------|------|--------|-----|-----------|------------|-----------|-------|-------|"]
+             "| # | Workflow | Layer | Runs | Fail | Silent | Cap | RepeatErr | Unverified | Med(s) | Hung(>1h) | Score | Issue |",
+             "|---|----------|-------|------|------|--------|-----|-----------|------------|--------|-----------|-------|-------|"]
     for i, (wf, spec, sig, score, issue, target, _) in enumerate(ranked, 1):
         layer = (spec or {}).get("declared_layer", "UNREGISTERED")
+        med = f"{sig['median_s']:.0f}" if sig.get("median_s") is not None else "-"
         lines.append(
             f"| {i} | {wf} | {layer} | {sig['runs']} | {sig['fail']:.0%} | {sig['silent']:.0%} "
-            f"| {sig['cap']:.0%} | {sig['repeat_error']:.0%} | {sig['unverified']:.0%} | {sig['hung']} | {score:.2f} | {issue or '-'} |"
+            f"| {sig['cap']:.0%} | {sig['repeat_error']:.0%} | {sig['unverified']:.0%} | {med} | {sig['hung']} | {score:.2f} | {issue or '-'} |"
         )
     if insufficient:
         lines += ["", "## Insufficient data (<5 runs)",

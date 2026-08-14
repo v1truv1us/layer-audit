@@ -1,11 +1,17 @@
 {
-  "weights": { "fail": 0.35, "silent": 0.30, "cap": 0.15, "repeat_error": 0.10, "unverified": 0.10 },
+  "weights": {
+    "fail": 0.35,
+    "silent": 0.3,
+    "cap": 0.15,
+    "repeat_error": 0.1,
+    "unverified": 0.1
+  },
   "thresholds": {
     "min_runs": 5,
     "fail_rate": 0.15,
-    "silent_rate": 0.10,
-    "repeat_error": 0.30,
-    "cap_rate": 0.30
+    "silent_rate": 0.1,
+    "repeat_error": 0.3,
+    "cap_rate": 0.3
   },
   "workflows": {
     "layer-audit": {
@@ -13,7 +19,8 @@
       "trigger": "launchd",
       "schedule": "Mon 07:00",
       "harness": "python",
-      "aliases": []
+      "aliases": [],
+      "max_duration_s": 120
     },
     "morning-brief": {
       "declared_layer": "prompt",
@@ -23,7 +30,8 @@
       "output_glob": "morning-brief-{date}.md",
       "output_dir": "~/.pi/agent/scheduled/output",
       "min_bytes": 500,
-      "aliases": []
+      "aliases": [],
+      "max_duration_s": 300
     },
     "triage": {
       "declared_layer": "prompt",
@@ -33,7 +41,8 @@
       "output_glob": "triage-{date}.md",
       "output_dir": "~/.pi/agent/scheduled/output",
       "min_bytes": 200,
-      "aliases": []
+      "aliases": [],
+      "max_duration_s": 300
     },
     "weekly-status": {
       "declared_layer": "prompt",
@@ -43,7 +52,8 @@
       "output_glob": "weekly-status-{date}.md",
       "output_dir": "~/.pi/agent/scheduled/output",
       "min_bytes": 500,
-      "aliases": []
+      "aliases": [],
+      "max_duration_s": 300
     },
     "meeting-prep": {
       "declared_layer": "prompt",
@@ -53,7 +63,8 @@
       "output_glob": "meeting-prep-{date}.md",
       "output_dir": "~/.pi/agent/scheduled/output",
       "min_bytes": 200,
-      "aliases": []
+      "aliases": [],
+      "max_duration_s": 600
     },
     "competitor-scan": {
       "declared_layer": "prompt",
@@ -95,20 +106,124 @@
       "min_bytes": 500,
       "aliases": []
     },
-    "test-fix-loop": { "declared_layer": "loop", "trigger": "manual+hook", "harness": "claude", "aliases": [] },
-    "investigation-loop": { "declared_layer": "loop", "trigger": "manual+hook", "harness": "claude", "aliases": [] },
-    "loop-on-ci": { "declared_layer": "loop", "trigger": "manual", "harness": "opencode", "aliases": [] },
-    "verification-loop": { "declared_layer": "loop", "trigger": "manual", "harness": "opencode", "aliases": [] },
-    "dreaming-consolidator": { "declared_layer": "loop", "trigger": "manual+hook+cron", "harness": "claude", "aliases": ["dream-digest"] },
-    "ralph-wiggum": { "declared_layer": "loop", "trigger": "manual+hook", "harness": "opencode", "aliases": ["ai-eng-ralph-wiggum"] },
-    "ud-audit-loop": { "declared_layer": "loop", "trigger": "launchd", "schedule": "monthly day 1 02:00", "harness": "sdk", "aliases": ["audit-loop"] },
-    "robinhood-cycle": { "declared_layer": "prompt", "trigger": "launchd", "schedule": "weekdays 07:35", "harness": "sdk", "aliases": [] },
-    "second-brain-vault-inbox": { "declared_layer": "prompt", "trigger": "cron", "schedule": "daily 03:00", "harness": "bash", "aliases": ["vault-inbox"] },
-    "second-brain-ops-inbox": { "declared_layer": "prompt", "trigger": "cron", "schedule": "daily 03:05", "harness": "bash", "aliases": ["ops-inbox"] },
-    "second-brain-compile": { "declared_layer": "prompt", "trigger": "cron", "schedule": "daily 03:15", "harness": "bash", "aliases": ["compile"] },
-    "second-brain-lint": { "declared_layer": "prompt", "trigger": "cron", "schedule": "Sun 03:30", "harness": "bash", "aliases": ["lint"] },
-    "second-brain-synthesis": { "declared_layer": "prompt", "trigger": "cron", "schedule": "Sun 04:00", "harness": "bash", "aliases": ["synthesis"] },
-    "second-brain-research-queue": { "declared_layer": "prompt", "trigger": "cron", "schedule": "Sun 04:30", "harness": "bash", "aliases": ["research-queue"] },
-    "second-brain-finance-pulse": { "declared_layer": "prompt", "trigger": "cron", "schedule": "1st of month 03:45", "harness": "bash", "aliases": ["finance-pulse"] }
+    "test-fix-loop": {
+      "declared_layer": "loop",
+      "trigger": "manual+hook",
+      "harness": "claude",
+      "aliases": []
+    },
+    "investigation-loop": {
+      "declared_layer": "loop",
+      "trigger": "manual+hook",
+      "harness": "claude",
+      "aliases": []
+    },
+    "loop-on-ci": {
+      "declared_layer": "loop",
+      "trigger": "manual",
+      "harness": "opencode",
+      "aliases": []
+    },
+    "verification-loop": {
+      "declared_layer": "loop",
+      "trigger": "manual",
+      "harness": "opencode",
+      "aliases": []
+    },
+    "dreaming-consolidator": {
+      "declared_layer": "loop",
+      "trigger": "manual+hook+cron",
+      "harness": "claude",
+      "aliases": [
+        "dream-digest"
+      ]
+    },
+    "ralph-wiggum": {
+      "declared_layer": "loop",
+      "trigger": "manual+hook",
+      "harness": "opencode",
+      "aliases": [
+        "ai-eng-ralph-wiggum"
+      ]
+    },
+    "ud-audit-loop": {
+      "declared_layer": "loop",
+      "trigger": "launchd",
+      "schedule": "monthly day 1 02:00",
+      "harness": "sdk",
+      "aliases": [
+        "audit-loop"
+      ]
+    },
+    "robinhood-cycle": {
+      "declared_layer": "prompt",
+      "trigger": "launchd",
+      "schedule": "weekdays 07:35",
+      "harness": "sdk",
+      "aliases": []
+    },
+    "second-brain-vault-inbox": {
+      "declared_layer": "prompt",
+      "trigger": "cron",
+      "schedule": "daily 03:00",
+      "harness": "bash",
+      "aliases": [
+        "vault-inbox"
+      ]
+    },
+    "second-brain-ops-inbox": {
+      "declared_layer": "prompt",
+      "trigger": "cron",
+      "schedule": "daily 03:05",
+      "harness": "bash",
+      "aliases": [
+        "ops-inbox"
+      ]
+    },
+    "second-brain-compile": {
+      "declared_layer": "prompt",
+      "trigger": "cron",
+      "schedule": "daily 03:15",
+      "harness": "bash",
+      "aliases": [
+        "compile"
+      ]
+    },
+    "second-brain-lint": {
+      "declared_layer": "prompt",
+      "trigger": "cron",
+      "schedule": "Sun 03:30",
+      "harness": "bash",
+      "aliases": [
+        "lint"
+      ]
+    },
+    "second-brain-synthesis": {
+      "declared_layer": "prompt",
+      "trigger": "cron",
+      "schedule": "Sun 04:00",
+      "harness": "bash",
+      "aliases": [
+        "synthesis"
+      ]
+    },
+    "second-brain-research-queue": {
+      "declared_layer": "prompt",
+      "trigger": "cron",
+      "schedule": "Sun 04:30",
+      "harness": "bash",
+      "aliases": [
+        "research-queue"
+      ]
+    },
+    "second-brain-finance-pulse": {
+      "declared_layer": "prompt",
+      "trigger": "cron",
+      "schedule": "1st of month 03:45",
+      "harness": "bash",
+      "aliases": [
+        "finance-pulse"
+      ]
+    }
   }
 }
