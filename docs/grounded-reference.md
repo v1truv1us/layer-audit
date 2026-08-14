@@ -131,6 +131,7 @@ Origin detail: Boris Cherny's quote is dated June 30, 2026 here — "I no longer
 18. Perneti (Augment Code), *What is loop engineering?* — https://www.augmentcode.com/guides/what-is-loop-engineering [primary/vendor, verified 2026-08-13]
 19. Abboud, *How Coding Agents Actually Work: Inside OpenCode* — https://cefboud.com/posts/coding-agents-internals-opencode-deepdive/ [secondary, source-code read, verified 2026-08-13]
 20. Njenga, *Claude Code Loop & Graph Engineering Masterclass (Part 1)* — https://open.substack.com/pub/claudecodemasterclass/p/claude-code-loop-and-graph-engineering [secondary, verified 2026-08-13]. Part 2 (graph engineering with agent teams) announced for 2026-08-17, not yet published at time of writing.
+21. Goodhart's law — Goodhart (1975, monetary policy: "any observed statistical regularity will tend to collapse once pressure is placed upon it for control purposes"); generalized by Hoskin (1996); canonical formulation by Strathern, *'Improving ratings': audit in the British University system*, European Review 5(3):305–321 (1997): "when a measure becomes a target, it ceases to be a good measure." [primary, verified 2026-08-13] Applied here: an agent optimizing an unguarded metric will reduce the work instead of the time — hence every perf goal pairs with a correctness gate.
 
 Unverified (surfaced in third-party research digests, not yet checked — treat as leads, not citations):
 - Raj, *Prompt vs Loop vs Graph Engineering* (Medium/The Gravity)
