@@ -15,6 +15,16 @@
 7. **Worked example: the second-brain cron chain becomes a graph** — 7 jobs at 03:00/03:05/03:15 (time-guessed dependencies) rewired as explicit edges with checkpointing; independent stages parallelized. Show the before crontab and the after diagram. Bonus: your `dynamic-workflow.ts` as the runtime.
 8. **The gut check as closer** — the 4 questions [17], applied to the graph you just built, honestly scored.
 
+## Step-by-step: promote one loop to a two-node graph
+
+1. **Pick the failing step inside your loop.** Almost always the reviewer — the loop checking its own work in the same context that did the work.
+2. **Write the state schema.** One sentence: "node one hands node two `<X>`." (e.g. "the draft file path + the acceptance criteria"). If you can't name what crosses the edge, stop here — you're not ready to split.
+3. **Split it.** Node two runs in a *fresh* context: a new headless call, a subagent, a child session — never a continuation of node one's transcript. Node two sees only the artifact + the bar, not the reasoning that produced it.
+4. **Route on the verdict in code.** `if reviewer_verdict == "fail": re-run node one with the critique`. The `if` lives in your shell/python, not in the model's instructions.
+5. **Checkpoint between nodes.** Write state to a file after each node so a crash resumes mid-graph instead of restarting.
+6. **Fan out only if N>1.** If node one iterates over N things one at a time (7 client sites, 10 sources), that's your first parallel branch. Otherwise skip it — a sequence drawn as boxes is not a graph.
+7. **Score yourself with the gut check.** Four questions, count the yeses. Two or fewer and you built a loop with extra steps — say so in the post.
+
 ## Pre-writing checklist
 
 - [ ] Build one real edge: pull verification of some workflow into a separate fresh-context step and measure whether it catches what the self-review missed

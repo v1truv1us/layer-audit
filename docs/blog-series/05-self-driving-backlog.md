@@ -15,6 +15,14 @@
 7. **The honest limits** — silent-failure heuristics false-positive; cap_rate needs weeks of data; it can't tell you a workflow is *pointless*, only that it's *failing*. The audit finds broken layers, not bad ideas.
 8. **Closer** — the loop closed on the series itself: the system that grades the workflows is itself registered in the registry, and its own audit row appears in the table. "Outcomes per dollar, not output per dollar" [18].
 
+## Step-by-step: the 80/20 version readers can copy in an afternoon
+
+1. **One ledger.** Pick a file: `~/.agent-runs.jsonl`. Every automated run appends one line: `{workflow, ts, outcome, duration_s}`. Wrap your scheduler (or add two `echo` lines to each job script) — 30 minutes, no dependencies.
+2. **One audit script.** A Python file that reads the ledger, computes per-workflow failure rate and count over 30 days, and prints a ranked table. No LLM. 50 lines.
+3. **One weekly trigger.** cron/launchd runs the audit Monday morning and drops the table where you'll see it (a file your morning brief reads, an email to yourself).
+4. **One queue rule.** You may only work on the top item. When it's fixed, the next audit re-ranks. That's the whole system — the discipline is the rule, not the tooling.
+5. **(Later) Proposals.** Once the ranking proves itself, add the folder queue: `pending/ → approved/ → done/`, and let an agent draft the fix plan into each pending file.
+
 ## Pre-writing checklist
 
 - [ ] Let the system run for 2+ real weeks so the numbers in section 5 are earned, not seeded

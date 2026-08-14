@@ -17,6 +17,21 @@
 6. **Worked example: morning-brief becomes a loop** — before (one `pi -p` call, 8% silent failure, 5-day hang) and after (verify output exists ≥ N bytes and has all five sections, retry ×3, emit telemetry). Show the actual diff.
 7. **Closer** — "My loop now checks its own homework. But it still grades its own essay. That's post 4."
 
+## Step-by-step: convert a scheduled prompt into a loop
+
+1. **Write the verifier first.** One shell command that exits 0 only when done: `[ -s "$OUT_FILE" ] && grep -q "SECTION_FIVE" "$OUT_FILE"`. If you can't write this line, you don't have a loop candidate — you have a prompt.
+2. **Wrap the call.** Verifier runs *before* the agent (don't burn tokens when already done), agent runs on failure, cap at 3 attempts:
+   ```bash
+   for i in 1 2 3; do
+     check_done && exit 0
+     claude -p "Output check failed: $(check_done 2>&1 | tail -5). Fix it." 
+   done
+   exit 1
+   ```
+3. **Test the failure path on purpose.** Delete the output file, run the wrapper, watch the agent get invoked. Then make the task impossible and confirm the cap fires. A loop you've never seen fail is a loop you haven't tested.
+4. **(Claude Code) Alternative: Stop hook.** Register a `Stop` hook in settings.json: run verifier, exit 0 if green, exit 2 with reason on stderr if red. Add the `stop_hook_active` guard at the top — exit 0 if set.
+5. **Add telemetry.** One log line per run: timestamp, attempts, verifier result. You'll want it for post 5.
+
 ## Pre-writing checklist
 
 - [ ] Confirm `/goal`, `/loop`, `/schedule` exist (type `/` in a Claude Code session; check docs) — correct or kill that section

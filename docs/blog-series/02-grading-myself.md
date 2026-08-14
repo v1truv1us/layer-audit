@@ -17,6 +17,14 @@
 5. **The gut check box** — the 4 questions from [17] as a sidebar; admit which of your "graphs" fail it.
 6. **Closer** — "The fix list wrote itself. Next: loops, starting with the five-day hang."
 
+## Step-by-step: grade your own workflows in 30 minutes
+
+1. **Inventory (10 min).** Run `crontab -l`, `ls ~/Library/LaunchAgents`, and list your skills/commands directories (`ls ~/.claude/skills ~/.config/opencode/skills`). Anything triggered more than twice is a workflow. Write the list.
+2. **Check for silent failures (10 min).** For each scheduled job, find its output from the last run. Missing file, zero bytes, or suspiciously tiny = it "succeeded" at producing nothing. This is the step that finds the bodies.
+3. **Check for hangs (5 min).** Grep your logs for absurd durations: any run 10× longer than the median is a hang your trigger swallowed.
+4. **Apply the rubric (5 min).** For each workflow, one line: repeated trigger? scriptable done-condition? needs parallel/approval/resume? That maps it to prompt / loop / graph / harness-fix.
+5. **Rank by frequency × pain.** A daily job failing 10% beats a weekly job failing 50%. That ranking is your work queue — you didn't decide anything; the numbers did.
+
 ## Pre-writing checklist
 
 - [ ] Verify the 457438s log line: `grep 457438 ~/.pi/agent/logs/runtimes.log`
