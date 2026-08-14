@@ -45,6 +45,7 @@ Hung runs (>1h duration) are reported informationally, not scored. `registry.jso
 - `docs/blog-draft.md` — first-person article draft based on the above
 - `docs/blog-series/` — 8-post series plan with per-post outlines and pre-writing checklists
 - `docs/performance-loops.md` — writing performance-goal verifiers (median-of-N, external measurement, anti-Goodhart pairing)
+- `docs/fast-verification.md` — fast gates (affected tests) + the bottleneck-hunting loop (faster / smaller axes)
 
 ## External wiring (absolute paths — update if this repo moves)
 
