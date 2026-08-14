@@ -26,6 +26,12 @@ The comparative trick: **build the same verifier loop and the same two-node grap
 | 7 | Loop and graph engineering in OpenCode | Plugins, SDK, child sessions — the most hackable surface |
 | 8 | Loop and graph engineering in Pi | Extensions, headless `pi -p`, launchd — the smallest surface |
 
+## Arc 3: The capstone workshop
+
+| # | Working title | Angle |
+|---|---------------|-------|
+| 9 | Give your slowest codebase a performance budget | Hands-on tutorial: rainfocus, from "needs perf work" to defended budget |
+
 ## Series rules
 
 1. **One claim per post, proven with your own machine.** Every post has a personal artifact: a log line, a before/after, a score table. This is what separates it from the 10,000-word slop the skeptics [17] predicted.
