@@ -40,6 +40,7 @@ Hung runs (>1h duration) are reported informationally, not scored. `registry.jso
 - `docs/grounded-reference.md` — the five layers, mechanics per harness, decision rubric, all web-sourced
 - `docs/classification-2026-08-12.md` — every workflow classified with rationale
 - `docs/blog-draft.md` — first-person article draft based on the above
+- `docs/blog-series/` — 5-post series plan with per-post outlines and pre-writing checklists
 
 ## External wiring (absolute paths — update if this repo moves)
 
